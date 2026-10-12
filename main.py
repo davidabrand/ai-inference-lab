@@ -1,3 +1,4 @@
+from hf_model import predict_text
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from time import perf_counter
@@ -22,6 +23,41 @@ class BatchInferenceRequest(BaseModel):
 
 class InferenceRequest(BaseModel):
     text: str = Field(min_length=1)
+
+class HFInferenceRequest(BaseModel):
+    text: str = Field(min_length=1)
+
+@app.post("/hf-infer")
+def hf_infer(
+    request: HFInferenceRequest
+):
+
+    start = perf_counter()
+
+
+    result = predict_text(
+        request.text
+    )
+
+
+    latency_ms = (
+        perf_counter() - start
+    ) * 1000
+
+
+    return {
+        "input": request.text,
+        "prediction": result["label"],
+        "confidence": round(
+            result["confidence"],
+            4
+        ),
+        "device": result["device"],
+        "latency_ms": round(
+            latency_ms,
+            2
+        )
+    }
 
 
 def classify_text(text: str) -> str:
