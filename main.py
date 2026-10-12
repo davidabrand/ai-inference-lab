@@ -1,46 +1,80 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from time import perf_counter
+import logging
 
-app = FastAPI(title="AI Inference Lab")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
+
+app = FastAPI(
+    title="AI Inference Lab",
+    version="0.2.0"
+)
 
 
 class InferenceRequest(BaseModel):
     text: str = Field(min_length=1)
 
 
+def classify_text(text: str) -> str:
+
+    text = text.lower()
+
+    if "internet" in text or "wifi" in text:
+        return "network_issue"
+
+    if "error" in text or "broken" in text:
+        return "technical_issue"
+
+    if "hello" in text or "hi" in text:
+        return "greeting"
+
+    return "general"
+
+
 @app.get("/health")
 def health():
+
     return {
         "status": "healthy",
-        "service": "ai-inference-lab"
+        "service": "ai-inference-lab",
+        "version": "0.2.0"
     }
 
+
 @app.get("/model-info")
-def modelinfo():
-    return{
+def model_info():
+
+    return {
         "name": "rule-based-v1",
         "version": "1.0",
         "hardware": "CPU",
         "type": "simulation"
     }
+
+
 @app.post("/infer")
 def infer(request: InferenceRequest):
+
+    logger.info("Inference request received")
+
     start = perf_counter()
 
-    # Temporary rule-based inference simulation
-    text = request.text.lower()
-
-    if "error" in text or "broken" in text:
-        prediction = "technical_issue"
-    elif "hello" in text or "hi" in text:
-        prediction = "greeting"
-    elif "internet" in text:
-        prediction = "network_issue"
-    else:
-        prediction = "general"
+    prediction = classify_text(request.text)
 
     latency_ms = (perf_counter() - start) * 1000
+
+    logger.info(
+        "Prediction=%s latency_ms=%.4f",
+        prediction,
+        latency_ms
+    )
 
     return {
         "input": request.text,
