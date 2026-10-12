@@ -17,6 +17,8 @@ app = FastAPI(
     version="0.2.0"
 )
 
+class BatchInferenceRequest(BaseModel):
+    texts: list[str]
 
 class InferenceRequest(BaseModel):
     text: str = Field(min_length=1)
@@ -80,5 +82,55 @@ def infer(request: InferenceRequest):
         "input": request.text,
         "prediction": prediction,
         "model": "rule-based-v1",
+        "latency_ms": round(latency_ms, 4)
+    }
+@app.post("/batch-infer")
+def batch_infer(request: BatchInferenceRequest):
+
+    start = perf_counter()
+
+    results = []
+
+    for text in request.texts:
+        prediction = classify_text(text)
+
+        results.append({
+            "input": text,
+            "prediction": prediction
+        })
+
+    latency_ms = (perf_counter() - start) * 1000
+
+    return {
+        "count": len(results),
+        "results": results,
+        "latency_ms": round(latency_ms, 4)
+    }
+
+from inference_model import run_model
+
+class TensorInferenceRequest(BaseModel):
+    features: list[float]
+
+@app.post("/torch-infer")
+def torch_infer(request: TensorInferenceRequest):
+
+    if len(request.features) != 4:
+        return {
+            "error": "Exactly 4 features are required"
+        }
+
+    start = perf_counter()
+
+    result = run_model(request.features)
+
+    latency_ms = (
+        perf_counter() - start
+    ) * 1000
+
+    return {
+        "prediction": result["label"],
+        "probabilities": result["probabilities"],
+        "device": result["device"],
         "latency_ms": round(latency_ms, 4)
     }

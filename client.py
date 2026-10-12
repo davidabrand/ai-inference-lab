@@ -10,7 +10,7 @@ requests_to_test = [
     "My wifi stopped working",
     "The computer is broken",
     "Tell me something interesting"
-] * 20
+]
 
 
 for text in requests_to_test:
